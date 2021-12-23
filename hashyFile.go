@@ -5,18 +5,16 @@ import (
 	"fmt"
 	"golang.org/x/text/language"
 	"golang.org/x/text/message"
-	"hash"
 	"io"
 	"io/fs"
 	"log"
 	"os"
 	"path/filepath"
-	"strings"
 )
 
 type theMap struct {
 	rootDir string
-	hashMap map[hash.Hash][]string
+	hashMap map[string][]fileDetails
 }
 type fileDetails struct {
 	path     string
@@ -24,18 +22,21 @@ type fileDetails struct {
 }
 
 //calculate hash of large file by reading it into buffer
-func hashOfFile(path string) hash.Hash {
-	input := strings.NewReader(path)
+func hashOfFile(path string) []byte {
+	file, err := os.Open(path)
+	if err != nil {
+		fmt.Println(err)
+	}
 	hash := sha256.New()
-	if _, err := io.Copy(hash, input); err != nil {
+	if _, err := io.Copy(hash, file); err != nil {
 		log.Fatal(err)
 	}
 	hash.Sum(nil)
-	return hash
+	return hash.Sum(nil)
 }
 
-func hashToHex(hash hash.Hash) string {
-	return fmt.Sprintf("%x", hash.Sum(nil))
+func hashToHex(hash []byte) string {
+	return fmt.Sprintf("%x", hash)
 }
 
 //traverse a directory, if it contains directory traverse them to
@@ -74,14 +75,11 @@ func walkFileDirectory(thePaths string) []fileDetails {
 }
 
 func hashMapFromListOfFiles(rootDir string, files []fileDetails) theMap {
-	fileHashMap := make(map[hash.Hash][]string)
+	fileHashMap := make(map[string][]fileDetails)
 	for _, fileDetails := range files {
 		fileHash := hashOfFile(fileDetails.path)
-		if len(fileHashMap[fileHash]) == 0 {
-			var tempSlice []string
-			append(tempSlice, fileDetails.path)
-		}
-		fileHashMap[fileHash] = append(fileHashMap[fileHash], fileDetails.path)
+		fileHashHex := hashToHex(fileHash)
+		fileHashMap[fileHashHex] = append(fileHashMap[fileHashHex], fileDetails)
 	}
 	return theMap{
 		rootDir: rootDir,
@@ -98,18 +96,17 @@ func lengthOfListFormatted(files *[]fileDetails) string {
 	return formatNumbers(len(*files))
 }
 func main() {
-	testDir := "/Users/samuelvarghese/Documents"
+	testDir := "/Users/samuelvarghese/Downloads"
 	fileList := walkFileDirectory(testDir)
-	for i, s := range fileList {
-		fmt.Println(i, s.fileInfo.Size(), s.path)
-	}
+	//for i, s := range fileList {
+	//	fmt.Println(i, s.fileInfo.Size(), s.path)
+	//}
 	fmt.Println("Scanned a total of " + lengthOfListFormatted(&fileList) + " files")
 	fileMap := hashMapFromListOfFiles(testDir, fileList)
 	for key, element := range fileMap.hashMap {
-		key := hashToHex(key)
 		duplicates := len(element)
 		if duplicates > 1 {
-			fmt.Println(key, " has duplicates ", duplicates)
+			fmt.Println("duplicates ", duplicates, element[0].fileInfo.Name(), "     hash: ", key)
 		}
 	}
 }
