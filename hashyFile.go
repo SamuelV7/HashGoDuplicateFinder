@@ -96,13 +96,14 @@ func lengthOfListFormatted(files *[]fileDetails) string {
 	return formatNumbers(len(*files))
 }
 func main() {
-	testDir := "/Users/samuelvarghese/Downloads"
-	fileList := walkFileDirectory(testDir)
+	//testDir := "/Users/samuelvarghese/Downloads"
+	fileDir := os.Args[1]
+	fileList := walkFileDirectory(fileDir)
 	//for i, s := range fileList {
 	//	fmt.Println(i, s.fileInfo.Size(), s.path)
 	//}
 	fmt.Println("Scanned a total of " + lengthOfListFormatted(&fileList) + " files")
-	fileMap := hashMapFromListOfFiles(testDir, fileList)
+	fileMap := hashMapFromListOfFiles(fileDir, fileList)
 	for key, element := range fileMap.hashMap {
 		duplicates := len(element)
 		if duplicates > 1 {
