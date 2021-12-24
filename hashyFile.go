@@ -11,6 +11,7 @@ import (
 	"os"
 	"path/filepath"
 	"runtime"
+	"sync"
 	//"runtime"
 )
 
@@ -82,15 +83,15 @@ func walkFileDirectory(thePaths string) []fileDetails {
 	return listOfFiles
 }
 
-func hashMapFromListOfFiles(rootDir string, files []fileDetails) theMap {
+func hashMapFromListOfFiles(files []fileDetails) workerMaps {
+	fmt.Println(len(files))
 	fileHashMap := make(map[string][]fileDetails)
 	for _, fileDetails := range files {
 		fileHash := hashOfFile(fileDetails.path)
 		fileHashHex := hashToHex(fileHash)
 		fileHashMap[fileHashHex] = append(fileHashMap[fileHashHex], fileDetails)
 	}
-	return theMap{
-		rootDir: rootDir,
+	return workerMaps{
 		hashMap: fileHashMap,
 	}
 }
@@ -118,12 +119,40 @@ func splitList(divideBy int, files fileList) []fileList {
 	indexOfSplit := len(files.list) / divideBy
 	return splitListRecursive(divideBy, indexOfSplit, files)
 }
+func assignListToWorker(arrayOfFileList []fileList) []workerMaps {
+	var wg sync.WaitGroup
+	c := make(chan workerMaps)
+	//making channels
+	leng := len(arrayOfFileList)
+	fmt.Println(leng)
+	for i := 0; i < len(arrayOfFileList)-1; i++ {
+		tempList := arrayOfFileList[i].list
+		wg.Add(i)
+		go func() {
+			fmt.Println("assing func: ", len(tempList))
+			output := hashMapFromListOfFiles(tempList)
+			c <- output
+			wg.Done()
+		}()
+
+	}
+	//for i, item := range arrayOfFileList {
+	//
+	//
+	//}
+	var theMaps []workerMaps
+	for i := 0; i < len(arrayOfFileList); i++ {
+		theMaps = append(theMaps, <-c)
+	}
+	fmt.Println(theMaps)
+	return theMaps
+}
 func lengthOfListFormatted(files *[]fileDetails) string {
 	return formatNumbers(len(*files))
 }
 func main() {
 	numOfCpu := runtime.NumCPU()
-	testDir := "/Users/samuelvarghese/Downloads"
+	testDir := "/Users/samuelvarghese/Documents"
 	//fileDir := os.Args[1]
 	fileLists := walkFileDirectory(testDir)
 	//for i, s := range fileList {
@@ -132,7 +161,8 @@ func main() {
 	fmt.Println("Scanned a total of " + lengthOfListFormatted(&fileLists) + " files")
 
 	splitList := splitList(numOfCpu, fileList{fileLists})
-	fmt.Println(splitList)
+	workerMapsTest := assignListToWorker(splitList)
+	fmt.Println(len(workerMapsTest[0].hashMap))
 	//fileMap := hashMapFromListOfFiles(fileDir, fileList)
 	//for key, element := range fileMap.hashMap {
 	//	duplicates := len(element)
