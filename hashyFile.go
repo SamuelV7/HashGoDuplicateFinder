@@ -10,11 +10,18 @@ import (
 	"log"
 	"os"
 	"path/filepath"
+	"runtime"
 )
 
 type theMap struct {
 	rootDir string
 	hashMap map[string][]fileDetails
+}
+type workerMaps struct {
+	hashMap map[string][]fileDetails
+}
+type fileList struct {
+	list []fileDetails
 }
 type fileDetails struct {
 	path     string
@@ -91,11 +98,38 @@ func formatNumbers(number int) string {
 	p := message.NewPrinter(language.English)
 	return p.Sprintf("%d\n", number)
 }
+func splitList(numberOfParts int, files fileList, returnFileList []fileList) []fileList{
+	if numberOfParts >= len(returnFileList){
+		return returnFileList
+	}
+	//make the first split
+	indexOfSplit := len(files.list) / numberOfParts
+	//splitted array fed into the return array
+	headOfSplit := files.list[0:indexOfSplit]
+	returnFileList = append(returnFileList, fileList{list: headOfSplit})
+	//and part that was split is removed fromfiles.list aka the tail
+	files.list = files.list[indexOfSplit:]
 
+	//now do it on the smaller array again
+	output := splitList(numberOfParts, files, returnFileList)
+}
+func splittingTask(workers int, filesList []fileDetails)  workerMaps{
+	//create an array of worker maps based on the number of workers
+	var listOfWorkerMaps []workerMaps
+	totalLength := len(filesList)
+	filesPerWorker := totalLength/workers
+	//on each iteration of the loop files perWorker will bed added to pointerToSplit
+	//so the fileList is divided up
+	pointerToSplit :=  filesPerWorker
+	for totalLength-1 > pointerToSplit   {
+		
+	}
+}
 func lengthOfListFormatted(files *[]fileDetails) string {
 	return formatNumbers(len(*files))
 }
 func main() {
+	numOfCpu := runtime.NumCPU()
 	//testDir := "/Users/samuelvarghese/Downloads"
 	fileDir := os.Args[1]
 	fileList := walkFileDirectory(fileDir)
