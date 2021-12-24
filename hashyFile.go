@@ -11,6 +11,7 @@ import (
 	"os"
 	"path/filepath"
 	"runtime"
+	//"runtime"
 )
 
 type theMap struct {
@@ -98,50 +99,45 @@ func formatNumbers(number int) string {
 	p := message.NewPrinter(language.English)
 	return p.Sprintf("%d\n", number)
 }
-func splitList(numberOfParts int, files fileList, returnFileList []fileList) []fileList{
-	if numberOfParts >= len(returnFileList){
-		return returnFileList
+func splitListRecursive(numberOfParts int, indexOfSplit int, files fileList) []fileList {
+	var filesListSplitted []fileList
+	if len(files.list) <= numberOfParts {
+		return append(filesListSplitted, files)
 	}
 	//make the first split
-	indexOfSplit := len(files.list) / numberOfParts
 	//splitted array fed into the return array
 	headOfSplit := files.list[0:indexOfSplit]
-	returnFileList = append(returnFileList, fileList{list: headOfSplit})
-	//and part that was split is removed fromfiles.list aka the tail
-	files.list = files.list[indexOfSplit:]
+	tailOfSplit := files.list[indexOfSplit:]
 
-	//now do it on the smaller array again
-	output := splitList(numberOfParts, files, returnFileList)
+	filesListSplitted = append(filesListSplitted, fileList{list: headOfSplit})
+	tailToAdd := splitListRecursive(numberOfParts, indexOfSplit, fileList{tailOfSplit})
+	return append(filesListSplitted, tailToAdd...)
+	//split tailOfSplit recursivley and add the result
 }
-func splittingTask(workers int, filesList []fileDetails)  workerMaps{
-	//create an array of worker maps based on the number of workers
-	var listOfWorkerMaps []workerMaps
-	totalLength := len(filesList)
-	filesPerWorker := totalLength/workers
-	//on each iteration of the loop files perWorker will bed added to pointerToSplit
-	//so the fileList is divided up
-	pointerToSplit :=  filesPerWorker
-	for totalLength-1 > pointerToSplit   {
-		
-	}
+func splitList(divideBy int, files fileList) []fileList {
+	indexOfSplit := len(files.list) / divideBy
+	return splitListRecursive(divideBy, indexOfSplit, files)
 }
 func lengthOfListFormatted(files *[]fileDetails) string {
 	return formatNumbers(len(*files))
 }
 func main() {
 	numOfCpu := runtime.NumCPU()
-	//testDir := "/Users/samuelvarghese/Downloads"
-	fileDir := os.Args[1]
-	fileList := walkFileDirectory(fileDir)
+	testDir := "/Users/samuelvarghese/Downloads"
+	//fileDir := os.Args[1]
+	fileLists := walkFileDirectory(testDir)
 	//for i, s := range fileList {
 	//	fmt.Println(i, s.fileInfo.Size(), s.path)
 	//}
-	fmt.Println("Scanned a total of " + lengthOfListFormatted(&fileList) + " files")
-	fileMap := hashMapFromListOfFiles(fileDir, fileList)
-	for key, element := range fileMap.hashMap {
-		duplicates := len(element)
-		if duplicates > 1 {
-			fmt.Println("duplicates ", duplicates, element[0].fileInfo.Name(), "     hash: ", key)
-		}
-	}
+	fmt.Println("Scanned a total of " + lengthOfListFormatted(&fileLists) + " files")
+
+	splitList := splitList(numOfCpu, fileList{fileLists})
+	fmt.Println(splitList)
+	//fileMap := hashMapFromListOfFiles(fileDir, fileList)
+	//for key, element := range fileMap.hashMap {
+	//	duplicates := len(element)
+	//	if duplicates > 1 {
+	//		fmt.Println("duplicates ", duplicates, element[0].fileInfo.Name(), "     hash: ", key)
+	//	}
+	//}
 }
