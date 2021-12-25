@@ -11,7 +11,6 @@ import (
 	"os"
 	"path/filepath"
 	"runtime"
-	"sync"
 	//"runtime"
 )
 
@@ -50,7 +49,6 @@ func hashToHex(hash []byte) string {
 
 //traverse a directory, if it contains directory traverse them to
 // add all these traversed paths into a list
-//
 func isFile(path string) bool {
 	fileInfo, err := os.Stat(path)
 	if err != nil {
@@ -100,6 +98,7 @@ func formatNumbers(number int) string {
 	p := message.NewPrinter(language.English)
 	return p.Sprintf("%d\n", number)
 }
+
 func splitListRecursive(numberOfParts int, indexOfSplit int, files fileList) []fileList {
 	var filesListSplitted []fileList
 	if len(files.list) <= numberOfParts {
@@ -115,41 +114,46 @@ func splitListRecursive(numberOfParts int, indexOfSplit int, files fileList) []f
 	return append(filesListSplitted, tailToAdd...)
 	//split tailOfSplit recursivley and add the result
 }
+
 func splitList(divideBy int, files fileList) []fileList {
 	indexOfSplit := len(files.list) / divideBy
 	return splitListRecursive(divideBy, indexOfSplit, files)
 }
-func assignListToWorker(arrayOfFileList []fileList) []workerMaps {
-	var wg sync.WaitGroup
-	c := make(chan workerMaps)
-	//making channels
-	leng := len(arrayOfFileList)
-	fmt.Println(leng)
-	for i := 0; i < len(arrayOfFileList)-1; i++ {
-		tempList := arrayOfFileList[i].list
-		wg.Add(i)
-		go func() {
-			fmt.Println("assing func: ", len(tempList))
-			output := hashMapFromListOfFiles(tempList)
-			c <- output
-			wg.Done()
-		}()
 
-	}
-	//for i, item := range arrayOfFileList {
-	//
-	//
-	//}
+func assignListToWorker(arrayOfFileList []fileList) []workerMaps {
+	//making channels
+	c := make(chan workerMaps, len(arrayOfFileList))
+	go hashMapChildren(arrayOfFileList, c)
+
 	var theMaps []workerMaps
-	for i := 0; i < len(arrayOfFileList); i++ {
-		theMaps = append(theMaps, <-c)
+	for {
+		message, open := <-c
+		theMaps = append(theMaps, message)
+		if !open {
+			return theMaps
+			break
+		}
 	}
-	fmt.Println(theMaps)
 	return theMaps
 }
+
+func hashMapChildren(arrayOfFileList []fileList, c chan workerMaps) {
+	for i := 0; i < len(arrayOfFileList); i++ {
+		output := hashMapFromListOfFiles(arrayOfFileList[i].list)
+		c <- output
+		last := len(arrayOfFileList) - 1
+		if i == last {
+			fmt.Println("Closing channel")
+			c <- output
+			close(c)
+		}
+	}
+}
+
 func lengthOfListFormatted(files *[]fileDetails) string {
 	return formatNumbers(len(*files))
 }
+
 func main() {
 	numOfCpu := runtime.NumCPU()
 	testDir := "/Users/samuelvarghese/Documents"
