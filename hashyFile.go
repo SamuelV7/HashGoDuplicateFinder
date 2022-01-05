@@ -124,13 +124,11 @@ func assignListToWorker(arrayOfFileList []fileList) []workerMaps {
 	//making channels
 	c := make(chan workerMaps, len(arrayOfFileList))
 	go hashMapChildren(arrayOfFileList, c)
-
 	var theMaps []workerMaps
 	for {
 		message, open := <-c
 		theMaps = append(theMaps, message)
 		if !open {
-			return theMaps
 			break
 		}
 	}
@@ -139,14 +137,15 @@ func assignListToWorker(arrayOfFileList []fileList) []workerMaps {
 
 func hashMapChildren(arrayOfFileList []fileList, c chan workerMaps) {
 	for i := 0; i < len(arrayOfFileList); i++ {
-		output := hashMapFromListOfFiles(arrayOfFileList[i].list)
-		c <- output
-		last := len(arrayOfFileList) - 1
-		if i == last {
-			fmt.Println("Closing channel")
+		elem := arrayOfFileList[i]
+		go func(c chan workerMaps){
+			output := hashMapFromListOfFiles(elem.list)
 			c <- output
-			close(c)
-		}
+			if i == len(arrayOfFileList){
+				fmt.Println("Closing channel")
+				close(c)
+			}
+		}(c)
 	}
 }
 
@@ -156,7 +155,8 @@ func lengthOfListFormatted(files *[]fileDetails) string {
 
 func main() {
 	numOfCpu := runtime.NumCPU()
-	testDir := "/Users/samuelvarghese/Documents"
+	// testDir := "/Users/samuelvarghese/Documents"
+	testDir :=  "C:/Users/samue/Desktop"
 	//fileDir := os.Args[1]
 	fileLists := walkFileDirectory(testDir)
 	//for i, s := range fileList {
