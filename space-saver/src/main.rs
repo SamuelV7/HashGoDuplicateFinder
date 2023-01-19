@@ -138,7 +138,7 @@ fn add_into_hash_map(rx: &std::sync::mpsc::Receiver<FileHash>, mut map: std::col
 
 fn main() {
     let dir = "/Users/samuelvarghese/Desktop/bluesy.mp3".to_string();
-    let i = file_hash_sha_256_buffered(&dir);
+    let i = channel_with_hashmap(&dir);
     println!("{:?}", i);
     // let out = walk_directory(&dir);
     // channel_with_hashmap(&dir);
