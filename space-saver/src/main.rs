@@ -10,25 +10,35 @@ struct FileHash{
     path: String,
 }
 
-fn file_hash_sha256(file: &str) -> String {
-    let mut f = File::open(file).unwrap();
-    let mut buffer = Vec::new();
-    f.read_to_end(&mut buffer).unwrap();
-    let mut hasher = Sha256::new();
-    Digest::update(&mut hasher, &buffer);
-    let result = hasher.finalize();
-    format!("{:x}", result)
+fn file_hash_sha256(file: &str) -> Option<String> {
+    let f = File::open(file);
+    match f {
+        Ok(mut file) => {
+            let mut buffer = Vec::new();
+            file.read_to_end(&mut buffer).unwrap();
+            let mut hasher = Sha256::new();
+            Digest::update(&mut hasher, &buffer);
+            let result = hasher.finalize();
+            Some(format!("{:x}", result))
+        },
+        Err(_) => return None,
+    };
+    None
 }
 
 fn walk_directory(dir: &str) -> Vec<String> {
     let mut files = Vec::new();
     for entry in fs::read_dir(dir).unwrap() {
-        let entry = entry.unwrap();
-        let path = entry.path();
-        if path.is_dir() {
-            files.append(&mut walk_directory(&path.to_str().unwrap()));
-        } else {
-            files.push(path.to_str().unwrap().to_string());
+        match entry {
+            Ok(entry) => {
+                let path = entry.path();
+                if path.is_dir() {
+                    files.append(&mut walk_directory(&path.to_str().unwrap()));
+                } else {
+                    files.push(path.to_str().unwrap().to_string());
+                }
+            },
+            Err(_) => {continue;},
         }
     }
     files
@@ -51,19 +61,27 @@ fn channel_with_hashmap(dir: &str) {
     // spawn thread to hash files using rayon and send to channel
     let hashing_thread = thread::spawn(move || {
         out.into_par_iter().for_each(|x| {
-            let hash = file_hash_sha256(&x);
-            let fh = FileHash {
-                hash: hash.clone(),
-                path: x.clone(),
-            };
-            tx.clone().send(fh).unwrap();
+            let hash_optional = file_hash_sha256(&x);
+            
+            match hash_optional {
+                Some(hash) => {
+                    let fh = FileHash {
+                        hash: hash,
+                        path: x.clone(),
+                    };
+                    tx.clone().send(fh).unwrap();
+                },
+                None => {
+                    println!("Error in hashing file: {}", x);
+                }
+            }
         });
     });
 
     // wait for thread to finish
     let store_thread = thread::spawn(move || {
         let map: std::collections::HashMap<String, Vec<FileHash>> = std::collections::HashMap::new();
-        add_into_hash_map(rx, map);
+        add_into_hash_map(&rx, map);
     });
     // join two threads
     let _st_r = store_thread.join();
@@ -71,7 +89,7 @@ fn channel_with_hashmap(dir: &str) {
 
 }
 
-fn add_into_hash_map(rx: std::sync::mpsc::Receiver<FileHash>, mut map: std::collections::HashMap<String, Vec<FileHash>>) {
+fn add_into_hash_map(rx: &std::sync::mpsc::Receiver<FileHash>, mut map: std::collections::HashMap<String, Vec<FileHash>>) {
     loop {
         let hashes = rx.recv();
         match hashes {
@@ -95,7 +113,7 @@ fn add_into_hash_map(rx: std::sync::mpsc::Receiver<FileHash>, mut map: std::coll
 }
 
 fn main() {
-    let dir = "/Users/samuelvarghese/Documents".to_string();
+    let dir = "E:/".to_string();
     // let out = walk_directory(&dir);
     channel_with_hashmap(&dir);
     println!("Hello, world!");
