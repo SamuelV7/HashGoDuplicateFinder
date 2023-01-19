@@ -12,8 +12,8 @@ struct FileHash{
 
 fn file_hash_sha256(file: &str) -> String {
     let mut f = File::open(file).unwrap();
-    let mut buffer = Vec::new();
-    f.read_to_end(&mut buffer).unwrap();
+    let mut buffer = [0; 4096];
+    f.read_exact(&mut buffer).unwrap();
     let mut hasher = Sha256::new();
     Digest::update(&mut hasher, &buffer);
     let result = hasher.finalize();
