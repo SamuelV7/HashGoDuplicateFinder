@@ -10,37 +10,38 @@ struct FileHash{
     path: String,
 }
 
-fn buffered_file_hasher_sha256(file: &str) -> Option<String> {
+fn file_hash_sha_256_buffered(file: &str) -> Option<String> {
     let f = File::open(file);
     match f {
         Ok(mut file) => {
-            let mut buffered_reader = std::io::BufReader::new(file);
-            let mut buffer = [0; 4096];
             let mut hasher = Sha256::new();
+            let mut buffer = [0; 4096*1000];
             loop {
-                let bytes_read = buffered_reader.read(&mut buffer).unwrap();
+                let bytes_read = file.read(&mut buffer).unwrap();
                 if bytes_read == 0 {
                     break;
                 }
                 hasher.update(&buffer[..bytes_read]);
             }
-            let result = hasher.finalize();
-            Some(format!("{:x}", result))
+            let hash = hasher.finalize();
+            println!("{:x}", hash.clone());
+            Some(format!("{:x}", hash))
         },
         Err(_) => return None,
     };
     None
 }
 
+
 fn file_hash_sha256(file: &str) -> Option<String> {
     let f = File::open(file);
     match f {
         Ok(mut file) => {
-            let buffered_reader = std::io::BufReader::new(file);
+            // let buffered_reader = std::io::BufReader::new(file);
             let mut buffer = [0; 4096];
-            // file.read(&mut buffered_reader).unwrap();
+            file.read(&mut buffer).unwrap();
             let mut hasher = Sha256::new();
-            Digest::update(&mut hasher, buffered_reader.buffer());
+            Digest::update(&mut hasher, buffer);
             let result = hasher.finalize();
             Some(format!("{:x}", result))
         },
@@ -84,7 +85,7 @@ fn channel_with_hashmap(dir: &str) {
     // spawn thread to hash files using rayon and send to channel
     let hashing_thread = thread::spawn(move || {
         out.into_par_iter().for_each(|x| {
-            let hash_optional = buffered_file_hasher_sha256(&x);
+            let hash_optional = file_hash_sha256(&x);
             
             match hash_optional {
                 Some(hash) => {
@@ -136,8 +137,10 @@ fn add_into_hash_map(rx: &std::sync::mpsc::Receiver<FileHash>, mut map: std::col
 }
 
 fn main() {
-    let dir = "C:/Users/samue/Downloads/".to_string();
+    let dir = "/Users/samuelvarghese/Desktop/bluesy.mp3".to_string();
+    let i = file_hash_sha_256_buffered(&dir);
+    println!("{:?}", i);
     // let out = walk_directory(&dir);
-    channel_with_hashmap(&dir);
+    // channel_with_hashmap(&dir);
     println!("Hello, world!");
 }
