@@ -85,7 +85,7 @@ fn channel_with_hashmap(dir: &str) {
     // spawn thread to hash files using rayon and send to channel
     let hashing_thread = thread::spawn(move || {
         out.into_par_iter().for_each(|x| {
-            let hash_optional = file_hash_sha256(&x);
+            let hash_optional = file_hash_sha_256_buffered(&x);
             
             match hash_optional {
                 Some(hash) => {
