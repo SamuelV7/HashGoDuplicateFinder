@@ -15,7 +15,7 @@ fn file_hash_sha_256_buffered(file: &str) -> Option<String> {
     match f {
         Ok(mut file) => {
             let mut hasher = Sha256::new();
-            let mut buffer = [0; 4096*1000];
+            let mut buffer = [0; 4096*100];
             loop {
                 let bytes_read = file.read(&mut buffer).unwrap();
                 if bytes_read == 0 {
@@ -24,8 +24,8 @@ fn file_hash_sha_256_buffered(file: &str) -> Option<String> {
                 hasher.update(&buffer[..bytes_read]);
             }
             let hash = hasher.finalize();
-            println!("{:x}", hash.clone());
-            Some(format!("{:x}", hash))
+            // println!("{:x}", hash.clone());
+            return Some(format!("{:x}", hash))
         },
         Err(_) => return None,
     };
@@ -37,8 +37,8 @@ fn file_hash_sha256(file: &str) -> Option<String> {
     let f = File::open(file);
     match f {
         Ok(mut file) => {
-            // let buffered_reader = std::io::BufReader::new(file);
-            let mut buffer = [0; 4096];
+            // let buffered_reader = std::io::BufReader::new(file);#
+            let mut buffer =Vec::new();
             file.read(&mut buffer).unwrap();
             let mut hasher = Sha256::new();
             Digest::update(&mut hasher, buffer);
@@ -86,7 +86,6 @@ fn channel_with_hashmap(dir: &str) {
     let hashing_thread = thread::spawn(move || {
         out.into_par_iter().for_each(|x| {
             let hash_optional = file_hash_sha_256_buffered(&x);
-            
             match hash_optional {
                 Some(hash) => {
                     let fh = FileHash {
@@ -137,9 +136,8 @@ fn add_into_hash_map(rx: &std::sync::mpsc::Receiver<FileHash>, mut map: std::col
 }
 
 fn main() {
-    let dir = "/Users/samuelvarghese/Desktop/bluesy.mp3".to_string();
+    let dir = "C:/Users/samue/Documents".to_string();
     let i = channel_with_hashmap(&dir);
-    println!("{:?}", i);
     // let out = walk_directory(&dir);
     // channel_with_hashmap(&dir);
     println!("Hello, world!");
