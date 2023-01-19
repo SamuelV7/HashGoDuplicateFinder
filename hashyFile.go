@@ -156,22 +156,22 @@ func lengthOfListFormatted(files *[]fileDetails) string {
 func main() {
 	numOfCpu := runtime.NumCPU()
 	// testDir := "/Users/samuelvarghese/Documents"
-	testDir :=  "C:/Users/samue/Desktop"
-	//fileDir := os.Args[1]
+	testDir :=  "/Users/samuelvarghese/Downloads"
+	// fileDir := os.Args[1]
 	fileLists := walkFileDirectory(testDir)
-	//for i, s := range fileList {
-	//	fmt.Println(i, s.fileInfo.Size(), s.path)
-	//}
+	for i, s := range fileLists {
+		fmt.Println(i, s.fileInfo.Size(), s.path)
+	}
 	fmt.Println("Scanned a total of " + lengthOfListFormatted(&fileLists) + " files")
 
 	splitList := splitList(numOfCpu, fileList{fileLists})
 	workerMapsTest := assignListToWorker(splitList)
 	fmt.Println(len(workerMapsTest[0].hashMap))
-	//fileMap := hashMapFromListOfFiles(fileDir, fileList)
-	//for key, element := range fileMap.hashMap {
-	//	duplicates := len(element)
-	//	if duplicates > 1 {
-	//		fmt.Println("duplicates ", duplicates, element[0].fileInfo.Name(), "     hash: ", key)
-	//	}
-	//}
+	fileMap := hashMapFromListOfFiles(fileLists)
+	for key, element := range fileMap.hashMap {
+		duplicates := len(element)
+		if duplicates > 1 {
+			fmt.Println("duplicates ", duplicates, element[0].fileInfo.Name(), "     hash: ", key)
+		}
+	}
 }
