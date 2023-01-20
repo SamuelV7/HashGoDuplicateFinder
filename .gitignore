@@ -13,4 +13,12 @@
 
 # Dependency directories (remove the comment below to include it)
 # vendor/
-*/target
+
+*/target/
+.rustc_info.json
+CACHEDIR.TAG
+
+.idea/
+
+# Save Files
+*-file-info.json

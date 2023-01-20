@@ -1,13 +1,25 @@
+use std::collections::HashMap;
+use std::fmt::format;
+use std::path::Path;
+use std::time::{SystemTime, UNIX_EPOCH};
 use std::{fs::File, fs};
-use std::io::Read;
+use std::io::{Read, Write};
 use std::thread;
 use rayon::prelude::{IntoParallelIterator, ParallelIterator};
 use sha2::{Sha256, Digest};
+use serde::{Serialize, Deserialize};
 
-#[derive(Debug)]
+#[derive(Debug, Serialize, Deserialize)]
 struct FileHash{
     hash: String,
     path: String,
+}
+#[derive(Debug, Serialize, Deserialize)]
+struct FileInfo{
+    count: u32,
+    hash: String,
+    // file_name: Vec<String>,
+    path: Vec<String>,
 }
 
 fn file_hash_sha_256_buffered(file: &str) -> Option<String> {
@@ -28,10 +40,8 @@ fn file_hash_sha_256_buffered(file: &str) -> Option<String> {
             return Some(format!("{:x}", hash))
         },
         Err(_) => return None,
-    };
-    None
+    }
 }
-
 
 fn file_hash_sha256(file: &str) -> Option<String> {
     let f = File::open(file);
@@ -129,16 +139,37 @@ fn add_into_hash_map(rx: &std::sync::mpsc::Receiver<FileHash>, mut map: std::col
             Err(_) => {
                 println!("There is no more data to read from the channel");
                 print_hash_map(&map);
+                converting_hashmap_to_json(&map);
                 break;
             }
         }            
     }
 }
 
+fn converting_hashmap_to_json(map: &std::collections::HashMap<String, Vec<FileHash>>) {
+    let new_map : Vec<FileInfo> = map.iter().map(|(key, value)| {
+        // get file name from path
+        let item = FileInfo{
+            // file_name: value.iter().map(|x| {
+            //     let path = Path::new(&x.path);
+            //     let file_name = path.file_name().unwrap().to_str().unwrap().to_string();
+            //     file_name
+            // }).collect(),
+            count: value.len() as u32,
+            hash: key.clone(),
+            path: value.iter().map(|x| x.path.clone()).collect(),
+        };
+        item
+    }).collect();
+    let json = serde_json::to_string(&new_map).unwrap();
+    let time_stamp = SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_secs().to_string();
+    let mut file = File::create(format!("{}-file-info.json", time_stamp)).unwrap();
+    file.write_all(json.as_bytes()).unwrap();
+    println!("File Saved At: {}", std::env::current_dir().unwrap().to_str().unwrap());
+}
+
+
 fn main() {
-    let dir = "C:/Users/samue/Documents".to_string();
-    let i = channel_with_hashmap(&dir);
-    // let out = walk_directory(&dir);
-    // channel_with_hashmap(&dir);
-    println!("Hello, world!");
+    let dir = "/Users/samuelvarghese/Downloads".to_string();
+    let _ = channel_with_hashmap(&dir);
 }
