@@ -15,9 +15,11 @@
 # vendor/
 
 */target/
-.rustc_info.json
+space-saver/target/.rustc_info.json
+
 CACHEDIR.TAG
 
+space-saver/target
 .idea/
 
 # Save Files

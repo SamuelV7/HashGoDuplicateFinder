@@ -1,6 +1,6 @@
-use std::collections::HashMap;
-use std::fmt::format;
-use std::path::Path;
+
+
+
 use std::time::{SystemTime, UNIX_EPOCH};
 use std::{fs::File, fs};
 use std::io::{Read, Write};
@@ -37,9 +37,9 @@ fn file_hash_sha_256_buffered(file: &str) -> Option<String> {
             }
             let hash = hasher.finalize();
             // println!("{:x}", hash.clone());
-            return Some(format!("{:x}", hash))
+            Some(format!("{:x}", hash))
         },
-        Err(_) => return None,
+        Err(_) => None,
     }
 }
 
@@ -67,7 +67,7 @@ fn walk_directory(dir: &str) -> Vec<String> {
             Ok(entry) => {
                 let path = entry.path();
                 if path.is_dir() {
-                    files.append(&mut walk_directory(&path.to_str().unwrap()));
+                    files.append(&mut walk_directory(path.to_str().unwrap()));
                 } else {
                     files.push(path.to_str().unwrap().to_string());
                 }
@@ -90,7 +90,7 @@ fn print_hash_map(map: &std::collections::HashMap<String, Vec<FileHash>>) {
 fn channel_with_hashmap(dir: &str) {
     // create channel to send hashes
     let (tx, rx) = std::sync::mpsc::sync_channel(50);
-    let out = walk_directory(&dir);
+    let out = walk_directory(dir);
     
     // spawn thread to hash files using rayon and send to channel
     let hashing_thread = thread::spawn(move || {
@@ -99,8 +99,8 @@ fn channel_with_hashmap(dir: &str) {
             match hash_optional {
                 Some(hash) => {
                     let fh = FileHash {
-                        hash: hash,
-                        path: x.clone(),
+                        hash,
+                        path: x,
                     };
                     tx.clone().send(fh).unwrap();
                 },
@@ -171,5 +171,5 @@ fn converting_hashmap_to_json(map: &std::collections::HashMap<String, Vec<FileHa
 
 fn main() {
     let dir = "/Users/samuelvarghese/Downloads".to_string();
-    let _ = channel_with_hashmap(&dir);
+    channel_with_hashmap(&dir);
 }
